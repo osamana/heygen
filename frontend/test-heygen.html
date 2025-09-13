@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeyGen Avatar Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #video-container { width: 400px; height: 300px; border: 2px solid #ccc; margin: 20px 0; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        button { padding: 10px 20px; margin: 5px; }
+        #logs { background: #f0f0f0; padding: 10px; height: 300px; overflow-y: scroll; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>HeyGen Avatar Test</h1>
+    <div id="video-container">
+        <p>Video will appear here...</p>
+    </div>
+    
+    <button onclick="initializeAvatar()">Initialize Avatar</button>
+    <button onclick="testSpeak()">Test Speak</button>
+    <button onclick="clearLogs()">Clear Logs</button>
+    
+    <div id="logs"></div>
+
+    <script src="https://unpkg.com/@heygen/streaming-avatar@latest/dist/index.umd.js"></script>
+    <script>
+        const API_KEY = 'MzIzMjhhM2E2ZmJkNDY0MmE4YTVkYTI5MGNmYWJiMzktMTc1Njg3Nzc1Nw==';
+        const AVATAR_ID = 'Pedro_ProfessionalLook2_public';
+        const KNOWLEDGE_ID = '3a8d1c3f55ec492394a6e01104bc0069';
+        
+        let streamingAvatar = null;
+        let accessToken = null;
+
+        function log(message) {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            logs.innerHTML += `[${timestamp}] ${message}\n`;
+            logs.scrollTop = logs.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        async function createAccessToken() {
+            try {
+                log('Creating access token...');
+                const response = await fetch('https://api.heygen.com/v1/streaming.create_token', {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': API_KEY,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                accessToken = data.data?.token || data.token;
+                log(`✅ Access token created: ${accessToken.substring(0, 20)}...`);
+                return accessToken;
+            } catch (error) {
+                log(`❌ Error creating access token: ${error.message}`);
+                throw error;
+            }
+        }
+
+        async function initializeAvatar() {
+            try {
+                if (!accessToken) {
+                    await createAccessToken();
+                }
+
+                log('Initializing StreamingAvatar...');
+                streamingAvatar = new StreamingAvatar.default({
+                    token: accessToken,
+                });
+
+                // Set up event listeners
+                streamingAvatar.on(StreamingAvatar.StreamingEvents.STREAM_READY, (event) => {
+                    log('🎥 STREAM_READY event received!');
+                    log(`Event keys: ${Object.keys(event || {})}`);
+                    
+                    // Look for video elements created by the SDK
+                    setTimeout(() => {
+                        const videos = document.querySelectorAll('video');
+                        log(`Found ${videos.length} video elements in DOM`);
+                        
+                        if (videos.length > 0) {
+                            const video = videos[videos.length - 1];
+                            const container = document.getElementById('video-container');
+                            container.innerHTML = '';
+                            container.appendChild(video);
+                            
+                            video.style.width = '100%';
+                            video.style.height = '100%';
+                            video.style.objectFit = 'cover';
+                            video.autoplay = true;
+                            video.playsInline = true;
+                            video.muted = false;
+                            
+                            log('✅ Video element added to container!');
+                        }
+                    }, 500);
+                });
+
+                streamingAvatar.on(StreamingAvatar.StreamingEvents.STREAM_DISCONNECTED, () => {
+                    log('❌ Stream disconnected');
+                });
+
+                streamingAvatar.on(StreamingAvatar.StreamingEvents.AVATAR_START_TALKING, () => {
+                    log('🗣️ Avatar started talking');
+                });
+
+                streamingAvatar.on(StreamingAvatar.StreamingEvents.AVATAR_STOP_TALKING, () => {
+                    log('🤐 Avatar stopped talking');
+                });
+
+                // Create and start avatar
+                log('Creating avatar session...');
+                const sessionInfo = await streamingAvatar.createStartAvatar({
+                    quality: StreamingAvatar.AvatarQuality.Low,
+                    avatarName: AVATAR_ID,
+                    knowledgeId: KNOWLEDGE_ID,
+                    language: 'en',
+                });
+
+                log('✅ Avatar session created successfully!');
+                log(`Session info: ${JSON.stringify(sessionInfo, null, 2)}`);
+
+            } catch (error) {
+                log(`❌ Error initializing avatar: ${error.message}`);
+                console.error('Full error:', error);
+            }
+        }
+
+        async function testSpeak() {
+            if (!streamingAvatar) {
+                log('❌ Avatar not initialized. Please initialize first.');
+                return;
+            }
+
+            try {
+                log('Testing avatar speech...');
+                await streamingAvatar.speak({
+                    text: "Hello! This is a test of the HeyGen streaming avatar. I am Pedro and I can speak!",
+                    task_type: StreamingAvatar.TaskType.TALK,
+                    taskMode: StreamingAvatar.TaskMode.SYNC
+                });
+                log('✅ Speech command sent successfully!');
+            } catch (error) {
+                log(`❌ Error making avatar speak: ${error.message}`);
+            }
+        }
+
+        // Enable audio context on click
+        document.addEventListener('click', function() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            audioContext.resume();
+        }, { once: true });
+
+        log('HeyGen Avatar Test loaded. Click "Initialize Avatar" to start.');
+    </script>
+</body>
+</html>
