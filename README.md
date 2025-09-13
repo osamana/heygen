@@ -62,7 +62,7 @@ npm install
 
 # Create environment file with your HeyGen credentials
 cat > .env.local << EOF
-NEXT_PUBLIC_HEYGEN_API_KEY=NjgwN2E5YjIyMTlhNGM3YjhmYTVjMjU0NDY0NjEyOWUtMTc1NjU2MDkyNA==
+NEXT_PUBLIC_HEYGEN_API_KEY=key
 NEXT_PUBLIC_HEYGEN_AVATAR_ID=Pedro_Blue_Shirt_public
 NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
 EOF
